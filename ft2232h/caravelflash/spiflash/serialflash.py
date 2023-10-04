@@ -25,9 +25,6 @@ from binascii import hexlify
 from typing import Iterable, Optional, Tuple, Union
 from pyftdi.misc import pretty_size
 from pyftdi.spi import SpiController, SpiPort
-from caravelflash.spi_port import CaravelPassThroughSpiPort
-
-UseCaravelPassThrough = True
 
 
 # pylint: disable-msg=too-many-arguments
@@ -228,7 +225,7 @@ class SerialFlashManager:
             
         
     @staticmethod
-    def get_from_spi_port(spi_orig: SpiPort,
+    def get_from_spi_port(spi: SpiPort,
                             cs: int = 0, freq: Optional[float] = None) \
             -> '_SpiFlashDevice':
         """Obtain an instance of the detected flash device, using an
@@ -240,19 +237,12 @@ class SerialFlashManager:
            :return: new instance of the flash device, if detected
         """
         
-        if UseCaravelPassThrough:
-            spi = CaravelPassThroughSpiPort.newFromSpiPort(spi_orig)
-        else:
-            spi = spi_orig
-        
         jedec = SerialFlashManager.read_jedec_id(spi)
         if not jedec:
             # it is likely that the latency setting is too low if this
             # condition is encountered
             raise SerialFlashUnknownJedec("Unable to read JEDEC Id")
         flash = SerialFlashManager._get_flash(spi, jedec)
-        if CaravelPassThroughSpiPort:
-            flash.spi_port_raw = spi_orig 
             
         flash.set_spi_frequency(freq)
         return flash
@@ -269,11 +259,8 @@ class SerialFlashManager:
         """
         ctrl = SpiController(cs_count=cs+1)
         ctrl.configure(url)
-        spi_orig = ctrl.get_port(cs, freq)
-        if UseCaravelPassThrough:
-            spi = CaravelPassThroughSpiPort.newFromSpiPort(spi_orig)
-        else:
-            spi = spi_orig
+        spi = ctrl.get_port(cs, freq)
+
         jedec = SerialFlashManager.read_jedec_id(spi)
         if not jedec:
             # it is likely that the latency setting is too low if this
@@ -281,9 +268,6 @@ class SerialFlashManager:
             raise SerialFlashUnknownJedec("Unable to read JEDEC Id")
         flash = SerialFlashManager._get_flash(spi, jedec)
         
-        if CaravelPassThroughSpiPort:
-            flash.spi_port_raw = spi_orig 
-            
         flash.set_spi_frequency(freq)
         return flash
 

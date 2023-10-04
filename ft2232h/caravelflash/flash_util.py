@@ -7,12 +7,12 @@ Created on Oct 3, 2023
 import logging
 import time
 import argparse
+from caravelflash.spi_port import CaravelPassThroughSpiPort
 from caravelflash.spiflash.serialflash import SerialFlash, SerialFlashManager
 from pyftdi.spi import SpiController
 
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG )
 
 FTDIDeviceURIDefault = 'ftdi://ftdi:2232:TG1000a9/2'
 class FlashUtil:
@@ -32,8 +32,11 @@ class FlashUtil:
         
         if not self.deviceURI:
             raise RuntimeError('Provide deviceURI prior to using spi controller')
-        
-        self._ctrl.configure(self.deviceURI)
+        try:
+            self._ctrl.configure(self.deviceURI)
+        except Exception as e:
+            log.error(f'Could not access FTDI device? {e}')
+            raise RuntimeError(str(e))
         self._ctrl_configured = True
         return self._ctrl
         
@@ -51,10 +54,15 @@ class FlashUtil:
     def flash(self) -> SerialFlash:
         if self._flash is not None:
             return self._flash 
-        
-        self._spi_port = None 
         try:
-            self._flash = SerialFlashManager.get_from_spi_port(self.spi_port)
+            rawSPIPort = self.spi_port
+        except RuntimeError as e:
+            return None 
+        
+        caravelSPIPortWrapper = CaravelPassThroughSpiPort.newFromSpiPort(rawSPIPort)
+        
+        try:
+            self._flash = SerialFlashManager.get_from_spi_port(caravelSPIPortWrapper)
         except Exception as e:
             raise RuntimeError(f"Issue connecting to flash!\n\n{str(e)}")
         
@@ -172,6 +180,9 @@ def argumentsValid(args):
             
 
 def main():
+    
+    logging.basicConfig(level=logging.WARN)
+    
     arg_parser = getArgParser()
     args = getArguments(arg_parser)
     if not argumentsValid(args):
@@ -181,9 +192,15 @@ def main():
     flashUtil = FlashUtil()
     flashUtil.deviceURI = args.uri
     
+    if flashUtil.flash is None:
+        print(f"\n\nCould not access FTDI device {flashUtil.deviceURI}\n\n")
+        return
+    
     if args.capacity:
         flashUtil.caravelHoldInReset(True)
-        print(f"Flash capacity: {flashUtil.flash.get_capacity()}")
+        capacity = flashUtil.flash.get_capacity()
+        log.info(f"Flash capacity: {capacity}")
+        print(capacity)
         flashUtil.caravelHoldInReset(False)
         
     if args.write:
@@ -201,9 +218,8 @@ def main():
     if args.write:
         print(f"Writing {len(writeContents)} to flash starting at {args.address}")
         flashUtil.upload(writeContents, args.address)
-    
-fu = FlashUtil()
-f = fu.flash
+
+
 if __name__ == '__main__':
     main()
     
