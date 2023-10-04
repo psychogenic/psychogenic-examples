@@ -10,11 +10,10 @@ Note that by default it wants to write and verify the entire flash memory.
 
 To avoid this lengthy process, you can create a layout file, e.g. put this is ttflash.layout:
 
-`
+```
 00000000:000025ff exe
-
 00002600:003FFFFF storage
-`
+```
 
 Just ensure the exe region has enough space for your bytes. Then:
 
