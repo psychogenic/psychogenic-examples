@@ -12,6 +12,7 @@ To avoid this lengthy process, you can create a layout file, e.g. put this is tt
 
 `
 00000000:000025ff exe
+
 00002600:003FFFFF storage
 `
 
