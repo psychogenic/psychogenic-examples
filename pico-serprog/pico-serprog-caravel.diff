@@ -1,0 +1,32 @@
+diff --git a/main.c b/main.c
+index 44d3552..b0dddd0 100644
+--- a/main.c
++++ b/main.c
+@@ -17,6 +17,8 @@
+ #include "pio/pio_spi.h"
+ #include "spi.h"
+ 
++
++#define USING_CARAVEL_PASSTHROUGH
+ #define PIN_LED PICO_DEFAULT_LED_PIN
+ #define PIN_MISO 4
+ #define PIN_MOSI 3
+@@ -78,6 +80,8 @@ void putu32(uint32_t d) {
+ unsigned char write_buffer[4096];
+ 
+ void process(pio_spi_inst_t *spi, int command) {
++    unsigned char passthrough[1];
++    passthrough[0] = 0xc4;
+     switch(command) {
+         case S_CMD_NOP:
+             putchar(S_ACK);
+@@ -131,6 +135,9 @@ void process(pio_spi_inst_t *spi, int command) {
+ 
+                 cs_select(PIN_CS);
+                 fread(write_buffer, 1, wlen, stdin);
++#ifdef USING_CARAVEL_PASSTHROUGH
++                pio_spi_write8_blocking(spi, passthrough, 1);
++#endif
+                 pio_spi_write8_blocking(spi, write_buffer, wlen);
+ 
+                 putchar(S_ACK);
