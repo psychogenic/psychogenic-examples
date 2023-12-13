@@ -10,7 +10,7 @@ import argparse
 from caravelflash.spi_port import CaravelPassThroughSpiPort
 from caravelflash.spiflash.serialflash import SerialFlash, SerialFlashManager
 from pyftdi.spi import SpiController
-
+import pyftdi.ftdi
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +22,20 @@ class FlashUtil:
         self._flash = None 
         self._ctrl_configured = False 
         self.deviceURI = FTDIDeviceURIDefault 
+        
+        
+    @classmethod
+    def listFTDIDevices(cls):
+        f = pyftdi.ftdi.Ftdi()
+        num = 0
+        for devEntry in f.list_devices():
+            num += 1
+            devDesc = devEntry[0]
+            print(f'{devDesc.description} @ USB{devDesc.vid:04X}:{devDesc.pid:04X} ')
+            for i in range(1,3):
+                print(f'\tftdi://ftdi:2232:{devDesc.sn}/{i}')
+        
+        return num
         
         
     @property
@@ -134,6 +148,10 @@ class FlashUtil:
 
 def getArgParser():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--list", action='store_true',
+                        required=False,
+                    help="list ftdi devices")
+    
     parser.add_argument("--capacity", action='store_true',
                         required=False,
                     help="read and dump flash capacity")
@@ -171,7 +189,7 @@ def argumentsValid(args):
                 return False
             
             
-    if args.read or args.write or args.capacity:
+    if args.read or args.write or args.capacity or args.list:
         return True 
 
     
@@ -188,6 +206,13 @@ def main():
     if not argumentsValid(args):
         arg_parser.print_help()
         return
+    
+    if args.list:
+        if not FlashUtil.listFTDIDevices():
+            print("NO FTDI devices found!")
+        return
+        
+    
     
     flashUtil = FlashUtil()
     flashUtil.deviceURI = args.uri
