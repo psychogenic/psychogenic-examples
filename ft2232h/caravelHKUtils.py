@@ -370,6 +370,9 @@ def flashInputs( gpioidstart = 24, gpioidend = 28, sleeptime=1):
         latchGPIOConfig()
         
         
+def restart():
+    setReset(True)
+    setReset(False)
     
 def main():
     setReset(True) # optional

@@ -1,0 +1,3 @@
+[submodule "pico-serprog/pico-serprog"]
+	path = pico-serprog/pico-serprog
+	url = https://github.com/stacksmashing/pico-serprog.git
